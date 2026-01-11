@@ -8,7 +8,16 @@ export interface NewsItem {
   time: string;
   tags: string[];
   impact: 'High' | 'Medium' | 'Low';
-  url?: string; // 新增：外部原文链接
+  url?: string;
+}
+
+export interface ModelRanking {
+  rank: number;
+  name: string;
+  provider: string;
+  score: number;
+  trend: 'up' | 'down' | 'stable';
+  specialty: string;
 }
 
 export interface DailyReport {
@@ -16,6 +25,8 @@ export interface DailyReport {
   headline: string;
   highlights: NewsItem[];
   trendAnalysis: string;
+  modelRankings?: ModelRanking[];
+  sources?: string[]; // Added to track search grounding sources
 }
 
 export enum NewsCategory {
