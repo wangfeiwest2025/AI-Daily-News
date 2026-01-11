@@ -27,11 +27,10 @@ const categories = ['全部', ...Object.values(NewsCategory)];
 const App: React.FC = () => {
   const [report, setReport] = useState<DailyReport | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [error, setError] = useState<boolean>(false);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-'));
   const [detailItem, setDetailItem] = useState<NewsItem | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('全部');
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [refreshTrigger, setRefreshTrigger] = useState(0); 
   
   const [stats, setStats] = useState<EngagementStats>(() => {
@@ -39,42 +38,42 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : {};
   });
 
+  // Robust news loading with fallback
   const loadNews = useCallback(async (dateToLoad: string) => {
     setLoading(true);
-    setError(null);
+    setError(false);
     try {
       const data = await fetchDailyAINews(dateToLoad);
-      if (data.highlights.length === 0) {
-        throw new Error("No news available");
-      }
+      if (!data || data.highlights.length === 0) throw new Error("Empty data");
       setReport(data);
     } catch (err) {
-      setError("无法获取最新数据，请稍后重试");
+      console.error("News load error:", err);
+      setError(true);
+      // Even on error, we could try to show old data or a fallback UI
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Sync date every minute to ensure the UI is fresh if left open overnight
+  // Update date and fetch news on mount and when refresh triggered
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
     setSelectedDate(today);
     loadNews(today);
 
-    const timer = setInterval(() => {
-      const currentToday = new Date().toISOString().split('T')[0];
-      if (currentToday !== selectedDate) {
-        setSelectedDate(currentToday);
-        loadNews(currentToday);
-      }
-    }, 60000);
+    // Auto refresh every 30 mins to keep date/content fresh
+    const interval = setInterval(() => {
+      const freshDate = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
+      if (freshDate !== selectedDate) setSelectedDate(freshDate);
+      loadNews(freshDate);
+    }, 1800000);
 
-    return () => clearInterval(timer);
+    return () => clearInterval(interval);
   }, [loadNews, refreshTrigger]);
 
   const handleNewsClick = (item: NewsItem) => {
     setDetailItem(item);
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
     
     setStats(prev => {
       const currentItemStats = prev[item.id] || { views: 0, shares: 0 };
@@ -98,10 +97,9 @@ const App: React.FC = () => {
     if (!report) return [];
     return report.highlights.filter(item => {
       const matchesCategory = activeCategory === '全部' || item.category === activeCategory;
-      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+      return matchesCategory;
     });
-  }, [report, activeCategory, searchQuery]);
+  }, [report, activeCategory]);
 
   const categoryHeat = useMemo(() => {
     if (!report) return [];
@@ -195,12 +193,12 @@ const App: React.FC = () => {
         {loading ? (
           <HeroSkeleton />
         ) : error ? (
-           <div className="py-24 text-center">
-              <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
-              <h2 className="text-2xl font-black mb-4">今日资讯尚在加载中</h2>
-              <p className="text-slate-400 mb-8 font-medium">可能是由于数据源响应过慢，请尝试重新加载。</p>
-              <button onClick={() => setRefreshTrigger(t => t + 1)} className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black flex items-center gap-2 mx-auto">
-                <RefreshCw className="w-4 h-4" /> 重新加载
+           <div className="py-24 text-center bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-800">
+              <AlertCircle className="w-16 h-16 text-indigo-400 mx-auto mb-6" />
+              <h2 className="text-2xl font-black mb-4">资讯获取受限</h2>
+              <p className="text-slate-400 mb-8 font-medium max-w-sm mx-auto">由于 API 响应延迟或配额限制，请尝试刷新。我们正在极力恢复实时连接。</p>
+              <button onClick={() => setRefreshTrigger(t => t + 1)} className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black flex items-center gap-2 mx-auto hover:scale-105 transition-transform active:scale-95 shadow-lg shadow-indigo-500/30">
+                <RefreshCw className="w-4 h-4" /> 重新连接
               </button>
            </div>
         ) : report && (
@@ -210,7 +208,7 @@ const App: React.FC = () => {
                 <BarChart3 className="absolute -bottom-10 -right-10 opacity-5 w-64 h-64" />
                 <div className="relative z-10 space-y-6">
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-[9px] font-black tracking-widest text-indigo-400 uppercase">
-                    <Zap className="w-3 h-3 fill-current" /> 实时洞察
+                    <Zap className="w-3 h-3 fill-current" /> 实时脉动
                   </div>
                   <h3 className="text-3xl md:text-5xl font-black leading-tight max-w-4xl tracking-tight">{report.headline}</h3>
                   <p className="text-slate-400 text-sm max-w-xl font-medium leading-relaxed">{report.trendAnalysis}</p>
@@ -219,7 +217,7 @@ const App: React.FC = () => {
               
               <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
                 <h3 className="text-[10px] font-black mb-6 text-slate-400 tracking-widest uppercase flex items-center gap-2">
-                  <Activity className="w-3.5 h-3.5 text-indigo-600" /> 近 7 天浏览趋势
+                  <Activity className="w-3.5 h-3.5 text-indigo-600" /> 近 7 天流量统计
                 </h3>
                 <TrafficChart key={`chart-${refreshTrigger}`} />
                 <div className="mt-6 space-y-3">
@@ -239,7 +237,7 @@ const App: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-12 pt-6">
               <aside className="lg:w-48 shrink-0">
                 <div className="sticky top-32 space-y-2">
-                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-6 px-4">频道选择</div>
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-6 px-4">快速导航</div>
                   {categories.map(cat => (
                     <button 
                       key={cat} 
@@ -267,7 +265,8 @@ const App: React.FC = () => {
                 {filteredNews.length === 0 && (
                    <div className="py-24 text-center">
                     <SearchIcon className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                    <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">该分类下暂无今日更新</p>
+                    <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">该分类暂无更多更新</p>
+                    <button onClick={() => setActiveCategory('全部')} className="mt-4 text-xs font-black text-indigo-600 underline">返回全部资讯</button>
                   </div>
                 )}
               </div>
@@ -277,29 +276,30 @@ const App: React.FC = () => {
                   <Trophy className="absolute -right-6 -bottom-6 w-32 h-32 opacity-10 rotate-12" />
                   <div className="relative z-10">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-[9px] font-black tracking-widest mb-6">
-                      <ExternalLink className="w-3 h-3" /> 模型榜单
+                      <ExternalLink className="w-3 h-3" /> 性能榜单
                     </div>
-                    <h3 className="text-xl font-black mb-4 leading-tight">Artificial Analysis 官方实时数据</h3>
-                    <p className="text-xs font-bold leading-relaxed mb-8 opacity-90">获取全球最精准的大模型性能、价格与质量对比数据。</p>
-                    <a href="https://artificialanalysis.ai/leaderboards/models" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-full py-4 bg-white text-indigo-600 rounded-2xl font-black text-xs hover:bg-slate-50 transition-all shadow-xl">
+                    <h3 className="text-xl font-black mb-4 leading-tight">Artificial Analysis 官方排名</h3>
+                    <p className="text-xs font-bold leading-relaxed mb-8 opacity-90">获取全球最精准的大模型 ELO 评分与性能对比数据。</p>
+                    <a href="https://artificialanalysis.ai/leaderboards/models" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-full py-4 bg-white text-indigo-600 rounded-2xl font-black text-xs hover:bg-slate-50 transition-all shadow-xl shadow-indigo-900/40">
                       查看排名详情 <ArrowUpRight className="ml-2 w-4 h-4" />
                     </a>
                   </div>
                 </div>
 
-                <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white border border-slate-800 shadow-sm">
+                <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white border border-slate-800 shadow-sm relative overflow-hidden">
+                   <Zap className="absolute -top-10 -left-10 w-48 h-48 text-indigo-500/5 rotate-12" />
                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                     <Zap className="w-3 h-3 text-indigo-400" /> 全站活跃度
+                     <Activity className="w-3 h-3 text-indigo-400" /> 交互概览
                    </h4>
-                   <div className="grid grid-cols-2 gap-4 mb-8">
+                   <div className="grid grid-cols-2 gap-4 mb-8 relative z-10">
                       <div className="bg-slate-800/50 p-4 rounded-2xl">
-                        <p className="text-[9px] font-black text-slate-500 uppercase mb-1">总曝光</p>
+                        <p className="text-[9px] font-black text-slate-500 uppercase mb-1">今日总曝光</p>
                         <p className="text-xl font-black text-white tabular-nums">
                           {(Object.values(stats) as {views: number}[]).reduce((acc, curr) => acc + curr.views, 0)}
                         </p>
                       </div>
                       <div className="bg-slate-800/50 p-4 rounded-2xl">
-                        <p className="text-[9px] font-black text-slate-500 uppercase mb-1">条均热度</p>
+                        <p className="text-[9px] font-black text-slate-500 uppercase mb-1">平均热度</p>
                         <p className="text-xl font-black text-indigo-400 tabular-nums">
                           {report?.highlights.length ? Math.round((Object.values(stats) as {views: number}[]).reduce((acc, curr) => acc + curr.views, 0) / report.highlights.length) : 0}
                         </p>
@@ -315,8 +315,12 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-slate-100 dark:border-slate-900 mt-20 flex justify-center">
-         <span className="text-[10px] font-black tracking-widest uppercase text-slate-400">AI DAILY PULSE &copy; {new Date().getFullYear()}</span>
+      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-slate-100 dark:border-slate-900 mt-20 flex justify-between items-center text-slate-400">
+         <span className="text-[10px] font-black tracking-widest uppercase">AI DAILY PULSE &copy; {new Date().getFullYear()}</span>
+         <div className="flex gap-6">
+            <a href="#" className="text-[10px] font-black hover:text-indigo-600">ABOUT</a>
+            <a href="#" className="text-[10px] font-black hover:text-indigo-600">PRIVACY</a>
+         </div>
       </footer>
     </div>
   );

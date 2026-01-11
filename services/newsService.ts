@@ -6,48 +6,47 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 function extractJSON(text: string) {
   try {
-    // Look for the first occurrence of { and the last occurrence of }
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    return JSON.parse(match[0]);
+    // Improved extraction to handle potential markdown wrappers or extra text
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+    if (startIdx === -1 || endIdx === -1) return null;
+    const jsonStr = text.substring(startIdx, endIdx + 1);
+    return JSON.parse(jsonStr);
   } catch (e) {
-    console.error("JSON Extraction failed:", e);
+    console.error("JSON Extraction failed. Raw text snippet:", text.substring(0, 100));
     return null;
   }
 }
 
-/**
- * Fetches the latest AI news. 
- */
 export const fetchDailyAINews = async (date: string): Promise<DailyReport> => {
   try {
     const prompt = `
-      今天是 ${date}。请搜索并汇总过去 24 小时内全球 AI 行业的 5 条重大新闻。
+      Current Date: ${date}. 
+      Task: Search for the 5 most significant global AI news stories from the last 24 hours (Models, GPUs, Policy, Big Tech).
       
-      任务：
-      1. 总结 5 条突发新闻（包括大模型发布、硬件突破、行业动态）。
-      2. 提供 2 句关于当前 AI 市场的趋势分析。
+      Requirements:
+      1. Use Simplified Chinese for all text.
+      2. Categorize into: ${Object.values(NewsCategory).join(', ')}.
+      3. Return ONLY a valid JSON object.
       
-      请严格按照以下 JSON 格式返回结果（简体中文）：
+      Format:
       {
-        "headline": "今日 AI 行业头条标题",
-        "trendAnalysis": "简短的趋势分析文字",
+        "headline": "Main Headline for the day",
+        "trendAnalysis": "2-sentence analysis of current market direction",
         "highlights": [
           {
-            "id": "news_unique_id_1",
-            "title": "新闻标题",
-            "summary": "详细摘要内容",
-            "category": "大语言模型",
-            "source": "来源媒体名称",
-            "time": "时间（如：2小时前）",
-            "tags": ["AI", "科技"],
+            "id": "unique_string",
+            "title": "Clear News Title",
+            "summary": "2-3 sentence summary",
+            "category": "One of categories listed above",
+            "source": "TechCrunch, Reuters, etc.",
+            "time": "Relative time (e.g. 3小时前)",
+            "tags": ["AI", "Tech"],
             "impact": "High",
-            "url": "https://example.com"
+            "url": "Valid news link"
           }
         ]
       }
-      
-      可选分类必须是以下之一: ${Object.values(NewsCategory).join(', ')}。
     `;
 
     const response = await ai.models.generateContent({
@@ -55,34 +54,28 @@ export const fetchDailyAINews = async (date: string): Promise<DailyReport> => {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        systemInstruction: "你是一个专业的 AI 新闻分析师。你必须只输出有效的 JSON 格式。确保 highlights 数组中至少包含 5 个条目。",
+        systemInstruction: "You are a world-class AI news editor. Accuracy is paramount. Always provide exactly 5 items. Output JSON ONLY.",
       },
     });
 
     const result = extractJSON(response.text || "{}");
     
-    if (!result || !result.highlights || result.highlights.length === 0) {
-      throw new Error("AI returned empty or invalid data");
+    if (!result || !result.highlights || !Array.isArray(result.highlights)) {
+      throw new Error("Invalid structure from AI");
     }
 
     return {
       date: date,
-      headline: result.headline || "今日 AI 行业动态",
-      trendAnalysis: result.trendAnalysis || "行业正在稳步推进。",
-      modelRankings: [], 
-      highlights: result.highlights,
+      headline: result.headline || "AI 行业今日动态汇总",
+      trendAnalysis: result.trendAnalysis || "全球 AI 领域正处于高速迭代期。",
+      highlights: result.highlights.map((h: any, idx: number) => ({
+        ...h,
+        id: h.id || `news-${date}-${idx}`
+      })),
       sources: ["https://artificialanalysis.ai/leaderboards/models"]
     };
   } catch (error) {
-    console.error("Fetch failed:", error);
-    // Return a fallback so the app doesn't crash but shows "update" state
-    return {
-      date: date,
-      headline: "AI 动态正在更新中...",
-      trendAnalysis: "由于数据源访问频率限制，请尝试刷新页面或检查网络连接。",
-      modelRankings: [],
-      highlights: [],
-      sources: ["https://artificialanalysis.ai/"]
-    };
+    console.warn("AI Fetch failed, returning empty state trigger:", error);
+    throw error; // Let App.tsx handle the fallback
   }
 };
