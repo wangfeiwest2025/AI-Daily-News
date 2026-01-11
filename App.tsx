@@ -7,9 +7,9 @@ import TrafficChart from './components/TrafficChart';
 import { HeroSkeleton } from './components/Skeleton';
 import { 
   RefreshCw, Sparkles, X, 
-  Share2, Search as SearchIcon,
-  BarChart3, Eye, Zap, Newspaper, Calendar, Filter, Activity,
-  ArrowUpRight, Bookmark, Trophy, ExternalLink, Link as LinkIcon, AlertCircle
+  Search as SearchIcon,
+  BarChart3, Eye, Zap, Newspaper, Calendar, Activity,
+  ArrowUpRight, Bookmark, Trophy, ExternalLink, AlertCircle
 } from 'lucide-react';
 
 const STORAGE_KEY = 'ai_portal_engagement_stats';
@@ -28,7 +28,7 @@ const App: React.FC = () => {
   const [report, setReport] = useState<DailyReport | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [detailItem, setDetailItem] = useState<NewsItem | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('全部');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -44,6 +44,9 @@ const App: React.FC = () => {
     setError(null);
     try {
       const data = await fetchDailyAINews(dateToLoad);
+      if (data.highlights.length === 0) {
+        throw new Error("No news available");
+      }
       setReport(data);
     } catch (err) {
       setError("无法获取最新数据，请稍后重试");
@@ -52,13 +55,27 @@ const App: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { loadNews(selectedDate); }, [selectedDate, loadNews]);
+  // Sync date every minute to ensure the UI is fresh if left open overnight
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    setSelectedDate(today);
+    loadNews(today);
+
+    const timer = setInterval(() => {
+      const currentToday = new Date().toISOString().split('T')[0];
+      if (currentToday !== selectedDate) {
+        setSelectedDate(currentToday);
+        loadNews(currentToday);
+      }
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, [loadNews, refreshTrigger]);
 
   const handleNewsClick = (item: NewsItem) => {
     setDetailItem(item);
     const today = new Date().toISOString().split('T')[0];
     
-    // Update per-item views
     setStats(prev => {
       const currentItemStats = prev[item.id] || { views: 0, shares: 0 };
       const newStats = {
@@ -69,13 +86,11 @@ const App: React.FC = () => {
       return newStats;
     });
 
-    // Update daily traffic chart data
     const savedTraffic = localStorage.getItem(TRAFFIC_KEY);
     const trafficData = savedTraffic ? JSON.parse(savedTraffic) : {};
     trafficData[today] = (trafficData[today] || 0) + 1;
     localStorage.setItem(TRAFFIC_KEY, JSON.stringify(trafficData));
     
-    // Trigger re-render of chart and stats
     setRefreshTrigger(prev => prev + 1);
   };
 
@@ -100,11 +115,10 @@ const App: React.FC = () => {
       ...d, 
       percentage: (d.totalViews / maxViews) * 100 
     })).sort((a,b) => b.totalViews - a.totalViews);
-  }, [report, stats, refreshTrigger]); // Add refreshTrigger to update heatmap
+  }, [report, stats, refreshTrigger]);
 
   return (
-    <div className="min-h-screen bg-[#FDFDFF] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
-      
+    <div className="min-h-screen bg-[#FDFDFF] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors font-sans">
       {detailItem && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-3xl bg-slate-900/60 animate-in fade-in duration-300">
           <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-white/20">
@@ -134,9 +148,7 @@ const App: React.FC = () => {
 
               <div className="bg-gradient-to-br from-indigo-50 to-white dark:from-slate-800 dark:to-slate-900 p-8 rounded-[2.5rem] border border-indigo-100/50 dark:border-slate-800">
                 <h4 className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-4">内容精要</h4>
-                <p className="text-lg font-medium text-slate-700 dark:text-slate-200 leading-relaxed">
-                  {detailItem.summary}
-                </p>
+                <p className="text-lg font-medium text-slate-700 dark:text-slate-200 leading-relaxed">{detailItem.summary}</p>
               </div>
 
               <div className="flex items-center gap-4 py-4 border-t border-slate-100 dark:border-slate-800">
@@ -164,15 +176,15 @@ const App: React.FC = () => {
             <div className="bg-slate-900 dark:bg-indigo-600 p-2 rounded-xl group-hover:rotate-6 transition-transform">
               <Sparkles className="text-white w-5 h-5"/>
             </div>
-            <h1 className="text-lg font-black tracking-tighter">AI DAILY <span className="text-indigo-600">PULSE</span></h1>
+            <h1 className="text-lg font-black tracking-tighter uppercase">AI DAILY <span className="text-indigo-600">PULSE</span></h1>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-              <Calendar className="w-3 h-3 text-slate-400" />
-              <span className="text-[10px] font-black text-slate-600 dark:text-slate-400">{selectedDate}</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+              <Calendar className="w-3 h-3 text-indigo-600" />
+              <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 tabular-nums tracking-widest">{selectedDate}</span>
             </div>
-            <button onClick={() => loadNews(selectedDate)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group">
+            <button onClick={() => setRefreshTrigger(t => t + 1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group">
               <RefreshCw className={`w-4 h-4 text-slate-500 group-active:rotate-180 transition-transform ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
@@ -185,8 +197,11 @@ const App: React.FC = () => {
         ) : error ? (
            <div className="py-24 text-center">
               <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
-              <h2 className="text-2xl font-black mb-4">资讯获取失败</h2>
-              <button onClick={() => loadNews(selectedDate)} className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black">重试</button>
+              <h2 className="text-2xl font-black mb-4">今日资讯尚在加载中</h2>
+              <p className="text-slate-400 mb-8 font-medium">可能是由于数据源响应过慢，请尝试重新加载。</p>
+              <button onClick={() => setRefreshTrigger(t => t + 1)} className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black flex items-center gap-2 mx-auto">
+                <RefreshCw className="w-4 h-4" /> 重新加载
+              </button>
            </div>
         ) : report && (
           <div className="space-y-12 animate-in fade-in duration-500">
@@ -194,8 +209,8 @@ const App: React.FC = () => {
               <div className="lg:col-span-3 bg-slate-900 text-white rounded-[3rem] p-10 md:p-12 relative overflow-hidden flex flex-col justify-center min-h-[300px] shadow-2xl">
                 <BarChart3 className="absolute -bottom-10 -right-10 opacity-5 w-64 h-64" />
                 <div className="relative z-10 space-y-6">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-[9px] font-black tracking-widest text-indigo-400">
-                    <Zap className="w-3 h-3 fill-current" /> 实时资讯流
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-[9px] font-black tracking-widest text-indigo-400 uppercase">
+                    <Zap className="w-3 h-3 fill-current" /> 实时洞察
                   </div>
                   <h3 className="text-3xl md:text-5xl font-black leading-tight max-w-4xl tracking-tight">{report.headline}</h3>
                   <p className="text-slate-400 text-sm max-w-xl font-medium leading-relaxed">{report.trendAnalysis}</p>
@@ -204,9 +219,8 @@ const App: React.FC = () => {
               
               <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
                 <h3 className="text-[10px] font-black mb-6 text-slate-400 tracking-widest uppercase flex items-center gap-2">
-                  <Activity className="w-3.5 h-3.5 text-indigo-600" /> 近 7 天流量统计
+                  <Activity className="w-3.5 h-3.5 text-indigo-600" /> 近 7 天浏览趋势
                 </h3>
-                {/* Chart updates when refreshTrigger changes */}
                 <TrafficChart key={`chart-${refreshTrigger}`} />
                 <div className="mt-6 space-y-3">
                    {categoryHeat.slice(0, 4).map(cat => (
@@ -225,7 +239,7 @@ const App: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-12 pt-6">
               <aside className="lg:w-48 shrink-0">
                 <div className="sticky top-32 space-y-2">
-                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-6 px-4">分类筛选</div>
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-6 px-4">频道选择</div>
                   {categories.map(cat => (
                     <button 
                       key={cat} 
@@ -241,7 +255,7 @@ const App: React.FC = () => {
               <div className="flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {filteredNews.map((item) => (
-                    <div key={item.id} className="relative">
+                    <div key={item.id} className="relative group">
                       <NewsCard news={item} onClick={handleNewsClick} />
                       <div className="absolute top-4 right-14 flex items-center gap-1.5 px-2 py-1 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg text-[9px] font-black text-slate-400 shadow-sm pointer-events-none border border-slate-100 dark:border-slate-700">
                         <Eye className="w-3 h-3 text-indigo-500" />
@@ -253,61 +267,46 @@ const App: React.FC = () => {
                 {filteredNews.length === 0 && (
                    <div className="py-24 text-center">
                     <SearchIcon className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                    <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">暂无匹配内容</p>
+                    <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">该分类下暂无今日更新</p>
                   </div>
                 )}
               </div>
 
               <aside className="lg:w-80 shrink-0 space-y-8">
                 <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden group shadow-xl">
-                  <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                    <Trophy className="w-32 h-32 rotate-12 group-hover:rotate-0 transition-transform duration-700" />
-                  </div>
-                  
+                  <Trophy className="absolute -right-6 -bottom-6 w-32 h-32 opacity-10 rotate-12" />
                   <div className="relative z-10">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-[9px] font-black tracking-widest mb-6">
-                      <ExternalLink className="w-3 h-3" /> 实时基准验证
+                      <ExternalLink className="w-3 h-3" /> 模型榜单
                     </div>
-                    <h3 className="text-xl font-black mb-4 leading-tight">
-                       访问 Artificial Analysis 官方实时榜单
-                    </h3>
-                    <p className="text-xs font-bold leading-relaxed mb-8 opacity-90">
-                      大模型竞技场排名波动极快。为了向您提供 100% 精准的数据，建议直接访问官方获取今日最新的性能评分。
-                    </p>
-                    <a 
-                      href="https://artificialanalysis.ai/leaderboards/models" 
-                      target="_blank" 
-                      rel="noreferrer" 
-                      className="inline-flex items-center justify-center w-full py-4 bg-white text-indigo-600 rounded-2xl font-black text-xs hover:bg-slate-50 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-indigo-900/30"
-                    >
-                      查看实时模型排名 <ArrowUpRight className="ml-2 w-4 h-4" />
+                    <h3 className="text-xl font-black mb-4 leading-tight">Artificial Analysis 官方实时数据</h3>
+                    <p className="text-xs font-bold leading-relaxed mb-8 opacity-90">获取全球最精准的大模型性能、价格与质量对比数据。</p>
+                    <a href="https://artificialanalysis.ai/leaderboards/models" target="_blank" rel="noreferrer" className="inline-flex items-center justify-center w-full py-4 bg-white text-indigo-600 rounded-2xl font-black text-xs hover:bg-slate-50 transition-all shadow-xl">
+                      查看排名详情 <ArrowUpRight className="ml-2 w-4 h-4" />
                     </a>
                   </div>
                 </div>
 
-                <div className="bg-slate-900 dark:bg-slate-900 rounded-[2.5rem] p-8 text-white border border-slate-800 shadow-sm relative overflow-hidden">
-                   <Activity className="absolute -bottom-8 -right-8 w-32 h-32 text-indigo-500/10" />
-                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                     <Zap className="w-3 h-3 text-indigo-400" /> 交互统计概览
+                <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white border border-slate-800 shadow-sm">
+                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                     <Zap className="w-3 h-3 text-indigo-400" /> 全站活跃度
                    </h4>
-                   <div className="grid grid-cols-2 gap-4 mb-6">
+                   <div className="grid grid-cols-2 gap-4 mb-8">
                       <div className="bg-slate-800/50 p-4 rounded-2xl">
-                        <p className="text-[9px] font-black text-slate-500 uppercase mb-1">总互动次数</p>
+                        <p className="text-[9px] font-black text-slate-500 uppercase mb-1">总曝光</p>
                         <p className="text-xl font-black text-white tabular-nums">
-                          {/* Corrected type casting for Object.values(stats) */}
                           {(Object.values(stats) as {views: number}[]).reduce((acc, curr) => acc + curr.views, 0)}
                         </p>
                       </div>
                       <div className="bg-slate-800/50 p-4 rounded-2xl">
-                        <p className="text-[9px] font-black text-slate-500 uppercase mb-1">平均热度</p>
+                        <p className="text-[9px] font-black text-slate-500 uppercase mb-1">条均热度</p>
                         <p className="text-xl font-black text-indigo-400 tabular-nums">
-                          {/* Corrected type casting and division logic */}
                           {report?.highlights.length ? Math.round((Object.values(stats) as {views: number}[]).reduce((acc, curr) => acc + curr.views, 0) / report.highlights.length) : 0}
                         </p>
                       </div>
                    </div>
-                   <button className="w-full py-3 bg-slate-800 hover:bg-indigo-600 rounded-xl text-[10px] font-black transition-colors uppercase tracking-widest">
-                     订阅技术周报
+                   <button className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-[10px] font-black transition-colors uppercase tracking-widest shadow-lg shadow-indigo-600/20">
+                     订阅每日推送
                    </button>
                 </div>
               </aside>
@@ -316,13 +315,8 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-slate-100 dark:border-slate-900 mt-20 flex flex-col md:flex-row justify-between items-center gap-6">
-         <div className="flex items-center gap-2 text-slate-400">
-           <div className="bg-slate-200 dark:bg-slate-800 p-1.5 rounded-lg">
-              <Sparkles className="w-3.5 h-3.5" />
-           </div>
-           <span className="text-[10px] font-black tracking-widest uppercase">AI DAILY PULSE &copy; 2025</span>
-        </div>
+      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-slate-100 dark:border-slate-900 mt-20 flex justify-center">
+         <span className="text-[10px] font-black tracking-widest uppercase text-slate-400">AI DAILY PULSE &copy; {new Date().getFullYear()}</span>
       </footer>
     </div>
   );
