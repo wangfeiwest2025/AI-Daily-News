@@ -1,7 +1,6 @@
 
 import { DailyReport, NewsCategory, NewsItem } from "../types";
 
-// A library of news templates to ensure realistic content
 const newsPool = [
   {
     title: "下一代超大规模推理模型发布，推理效率提升 400%",
@@ -12,7 +11,7 @@ const newsPool = [
     impact: 'High'
   },
   {
-    title: "全球首个 AI 治理框架协议在苏黎世签署",
+    title: "全球首个 AI 治理框架协议正式签署",
     summary: "来自 30 多个国家的代表共同签署了该协议，旨在规范大模型的透明度、安全边界以及训练数据的合规性。这被视为全球 AI 监管迈出的里程碑式一步。",
     category: NewsCategory.POLICY,
     source: "Global Tech Watch",
@@ -36,7 +35,7 @@ const newsPool = [
     impact: 'Medium'
   },
   {
-    title: "AI 算力租凭市场价格出现大幅波动，需求转向端侧",
+    title: "AI 算力租赁市场需求转向端侧，云端成本下降",
     summary: "随着移动端大模型优化技术的普及，开发者对云端昂贵算力的依赖有所降低。分析师预测，未来 12 个月内，端侧 AI 算力将占据 60% 的市场份额。",
     category: NewsCategory.INDUSTRY,
     source: "Market Pulse",
@@ -50,6 +49,14 @@ const newsPool = [
     source: "OpenDev",
     tags: ["开源", "社区", "生态"],
     impact: 'Low'
+  },
+  {
+    title: "通用人工智能 (AGI) 在数学证明领域取得新突破",
+    summary: "研究人员利用强化学习技术，成功让模型自主证明了多个数论难题。这一进展标志着 AI 在严密逻辑推理领域已经接近人类数学家的水平。",
+    category: NewsCategory.TECHNOLOGY,
+    source: "Logic Daily",
+    tags: ["AGI", "数学推理", "强化学习"],
+    impact: 'High'
   }
 ];
 
@@ -60,20 +67,20 @@ const trendPool = [
   "多模态技术的爆发使得视频生成与 3D 建模成为今年最炙手可热的技术高地。"
 ];
 
-// Helper to generate deterministic items based on a date string
 export const generateDailyNews = (dateStr: string): DailyReport => {
-  // Use a simple hash of the date string to select items deterministically
-  const seed = dateStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  // Simple seed generation from date string YYYY-MM-DD
+  const seed = dateStr.split('-').reduce((acc, part) => acc + parseInt(part), 0);
   
+  // Deterministic shuffle using seed
   const shuffled = [...newsPool].sort((a, b) => {
-    const hashA = (a.title.length + seed) % 100;
-    const hashB = (b.title.length + seed) % 100;
-    return hashA - hashB;
+    const valA = (a.title.length * seed) % 100;
+    const valB = (b.title.length * seed) % 100;
+    return valA - valB;
   });
 
   const highlights: NewsItem[] = shuffled.slice(0, 5).map((item, idx) => ({
     ...item,
-    id: `sim-news-${dateStr}-${idx}`,
+    id: `local-news-${dateStr}-${idx}`,
     time: `${(seed + idx) % 12 + 1} 小时前`,
     impact: (idx === 0) ? 'High' : (idx < 3 ? 'Medium' : 'Low') as any
   }));
@@ -84,7 +91,6 @@ export const generateDailyNews = (dateStr: string): DailyReport => {
     date: dateStr,
     headline: highlights[0].title,
     trendAnalysis: trendPool[trendIdx],
-    highlights: highlights,
-    sources: ["https://artificialanalysis.ai/"]
+    highlights: highlights
   };
 };
