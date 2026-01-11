@@ -3,14 +3,16 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DailyReport, NewsCategory, NewsItem } from './types';
 import { fetchDailyAINews } from './services/newsService';
 import NewsCard from './components/NewsCard';
-import { NewsSkeleton, HeroSkeleton } from './components/Skeleton';
+import TrafficChart from './components/TrafficChart';
+import { HeroSkeleton } from './components/Skeleton';
 import { 
   RefreshCw, TrendingUp, Sparkles, X, 
-  MessageSquareQuote, Share2, Search,
-  Globe, BarChart3, Eye, Zap, Newspaper, Calendar
+  MessageSquareQuote, Share2, Search as SearchIcon,
+  Globe, BarChart3, Eye, Zap, Newspaper, Calendar, Filter, Activity
 } from 'lucide-react';
 
 const STORAGE_KEY = 'ai_portal_engagement_stats';
+const TRAFFIC_KEY = 'ai_portal_daily_traffic';
 
 interface EngagementStats {
   [key: string]: {
@@ -27,6 +29,9 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [detailItem, setDetailItem] = useState<NewsItem | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('全部');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // 用于强制刷新图表组件
+  
   const [stats, setStats] = useState<EngagementStats>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : {};
@@ -43,6 +48,9 @@ const App: React.FC = () => {
 
   const handleNewsClick = (item: NewsItem) => {
     setDetailItem(item);
+    const today = new Date().toISOString().split('T')[0];
+    
+    // 1. 更新单篇新闻统计
     setStats(prev => {
       const newStats = {
         ...prev,
@@ -51,7 +59,26 @@ const App: React.FC = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
       return newStats;
     });
+
+    // 2. 更新每日总流量统计（用于真实趋势图）
+    const savedTraffic = localStorage.getItem(TRAFFIC_KEY);
+    const trafficData = savedTraffic ? JSON.parse(savedTraffic) : {};
+    trafficData[today] = (trafficData[today] || 0) + 1;
+    localStorage.setItem(TRAFFIC_KEY, JSON.stringify(trafficData));
+    
+    // 触发图表重新渲染
+    setRefreshTrigger(prev => prev + 1);
   };
+
+  const filteredNews = useMemo(() => {
+    if (!report) return [];
+    return report.highlights.filter(item => {
+      const matchesCategory = activeCategory === '全部' || item.category === activeCategory;
+      const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            item.summary.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [report, activeCategory, searchQuery]);
 
   const categoryHeat = useMemo(() => {
     if (!report) return [];
@@ -105,7 +132,7 @@ const App: React.FC = () => {
                     <Globe className="w-4 h-4 text-blue-500" /> 百度搜索
                   </a>
                   <a href={`https://www.google.com/search?q=${encodeURIComponent(detailItem.title)}`} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-3 py-6 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl text-xs font-black text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-all shadow-sm">
-                    <Search className="w-4 h-4 text-indigo-500" /> Google 搜索
+                    <SearchIcon className="w-4 h-4 text-indigo-500" /> Google 搜索
                   </a>
                 </div>
               </div>
@@ -149,6 +176,20 @@ const App: React.FC = () => {
             </div>
             <h1 className="text-xl font-black tracking-tighter">AI DAILY <span className="text-indigo-600">PULSE</span></h1>
           </div>
+
+          <div className="hidden md:flex flex-1 max-w-md mx-8">
+            <div className="relative w-full group">
+              <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+              <input 
+                type="text"
+                placeholder="搜索今日 AI 动态..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-100 dark:bg-slate-900 border-none rounded-2xl py-2.5 pl-11 pr-4 text-xs font-medium focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none"
+              />
+            </div>
+          </div>
+
           <nav className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -177,15 +218,16 @@ const App: React.FC = () => {
               </div>
               
               <div className="bg-white dark:bg-slate-900 rounded-[3.5rem] p-10 border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col">
-                <h3 className="text-sm font-black mb-8 flex items-center gap-2 text-slate-400 tracking-widest uppercase">
-                  <TrendingUp className="w-4 h-4 text-indigo-600" /> 热度趋势统计
+                <h3 className="text-sm font-black mb-6 flex items-center gap-2 text-slate-400 tracking-widest uppercase">
+                  <TrendingUp className="w-4 h-4 text-indigo-600" /> 实时数据热度
                 </h3>
+                
                 <div className="space-y-6 flex-grow">
                   {categoryHeat.map((cat) => (
                     <div key={cat.name} className="space-y-3">
                       <div className="flex justify-between text-[11px] font-black uppercase text-slate-500">
                         <span>{cat.name}</span>
-                        <span className="text-indigo-600">{cat.totalViews} 次阅读</span>
+                        <span className="text-indigo-600">{cat.totalViews} 次</span>
                       </div>
                       <div className="h-2 bg-slate-50 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div 
@@ -196,8 +238,12 @@ const App: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                <div className="mt-10 pt-6 border-t border-slate-50 dark:border-slate-800 text-center">
-                   <p className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em]">由本地引擎驱动</p>
+
+                <div className="mt-8 pt-6 border-t border-slate-50 dark:border-slate-800">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Activity className="w-3 h-3 text-indigo-600" /> 7日浏览量趋势
+                  </h4>
+                  <TrafficChart key={refreshTrigger} />
                 </div>
               </div>
             </section>
@@ -205,7 +251,9 @@ const App: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-16 pt-8">
               <aside className="lg:w-64">
                 <nav className="sticky top-32 space-y-3">
-                  <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8 px-6">筛选内容</div>
+                  <div className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8 px-6 flex items-center gap-2">
+                    <Filter className="w-3 h-3" /> 筛选内容
+                  </div>
                   {categories.map(cat => (
                     <button 
                       key={cat} 
@@ -219,16 +267,27 @@ const App: React.FC = () => {
               </aside>
 
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-10">
-                {report.highlights.filter(h => activeCategory === '全部' || h.category === activeCategory).map(item => (
-                  <NewsCard key={item.id} news={item} onClick={handleNewsClick} />
-                ))}
+                {filteredNews.length > 0 ? (
+                  filteredNews.map(item => (
+                    <NewsCard key={item.id} news={item} onClick={handleNewsClick} />
+                  ))
+                ) : (
+                  <div className="md:col-span-2 py-32 flex flex-col items-center justify-center text-center">
+                    <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-full mb-6">
+                      <SearchIcon className="w-12 h-12 text-slate-200" />
+                    </div>
+                    <h4 className="text-xl font-bold mb-2">未找到匹配内容</h4>
+                    <p className="text-slate-400 text-sm">尝试更换搜索词或筛选分类</p>
+                  </div>
+                )}
                 
-                {/* 底部占位卡片：提示更多 */}
-                <div className="md:col-span-2 py-16 flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="w-16 h-1 bg-slate-100 dark:bg-slate-800 rounded-full"></div>
-                  <p className="text-slate-400 text-xs font-black uppercase tracking-widest">今日资讯已呈现完毕</p>
-                  <p className="text-slate-300 text-[10px] font-medium max-w-xs leading-relaxed">我们每天清晨会自动整理全球 AI 行业的最新动态，欢迎明日再来。</p>
-                </div>
+                {filteredNews.length > 0 && (
+                  <div className="md:col-span-2 py-16 flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="w-16 h-1 bg-slate-100 dark:bg-slate-800 rounded-full"></div>
+                    <p className="text-slate-400 text-xs font-black uppercase tracking-widest">今日资讯已呈现完毕</p>
+                    <p className="text-slate-300 text-[10px] font-medium max-w-xs leading-relaxed">我们每天清晨会自动整理全球 AI 行业的最新动态，欢迎明日再来。</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
