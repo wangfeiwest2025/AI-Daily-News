@@ -7,87 +7,127 @@ const getTodayStr = () => new Date().toISOString().split('T')[0];
 const NEWS_DATABASE: Record<string, DailyReport> = {
   "default": {
     date: getTodayStr(),
-    headline: "AI 2.0 时代：从“大模型”向“大应用”的全面跨越",
-    trendAnalysis: "本周 AI 行业焦点已从模型底座竞争转向垂直领域应用。具身智能、AI 智能体（Agents）以及端侧芯片性能的突破，标志着 AI 正从云端实验室走向每一个真实的生活场景。",
+    headline: "AI 2.0 时代：从对话助手到全能智能体 (Agents) 的进化",
+    trendAnalysis: "今日数据表明，开发者关注度正从模型参数量转移到逻辑规划（Reasoning）与任务执行（Execution）上。具身智能与大模型的深度融合成为 ainews.com、Synced 等媒体的头版关键词。",
     highlights: [
       {
         id: "news_001",
-        title: "OpenAI 推出 GPT-5 预览版：逻辑推理能力实现指数级跃迁",
-        summary: "OpenAI 今日小范围开放了下一代模型 GPT-5 的推理测试。新模型引入了‘思维链自我纠正’机制，在解决高等数学问题和多步编程任务时，错误率降低了 85%。该模型据称已具备初级博士水平的领域认知能力，预计将在下个季度全面推向 Plus 用户。",
+        title: "OpenAI 'Strawberry' 项目细节曝光：通过强化学习实现自主思考",
+        summary: "内部消息透露，OpenAI 正在开发的 Strawberry 模型具备极强的逻辑推理能力，能够自主解决未见过的复杂数学和科学难题。",
         category: NewsCategory.MODEL,
-        source: "OpenAI Blog",
-        time: "10:25 AM",
-        tags: ["GPT-5", "逻辑推理"],
+        source: "ainews.com",
+        time: "08:15 AM",
+        tags: ["OpenAI", "Strawberry"],
         impact: "High",
-        url: "https://openai.com"
+        url: "https://www.ainews.com"
       },
       {
         id: "news_002",
-        title: "英伟达 Blackwell 芯片正式量产，算力成本骤降 60%",
-        summary: "黄仁勋今日在 GTC 大会上确认，首批 Blackwell 架构 GPU 已交付顶级数据中心。新架构专为万亿参数模型设计，其 FP4 精度推理速度是上一代的 5 倍，这意味着中小企业部署大模型的硬件门槛将显著降低。",
-        category: NewsCategory.HARDWARE,
-        source: "NVIDIA News",
-        time: "11:45 AM",
-        tags: ["Blackwell", "算力革命"],
+        title: "机器之心：智源研究院发布全球首个‘通用视觉’大模型",
+        summary: "智源研究院（BAAI）推出的新模型突破了单一任务限制，可在自动驾驶、医疗影像和工业检测中通用。",
+        category: NewsCategory.TECHNOLOGY,
+        source: "Synced 机器之心",
+        time: "09:30 AM",
+        tags: ["通用视觉", "智源"],
         impact: "High",
-        url: "https://nvidia.com"
+        url: "https://www.jiqizhixin.com/"
       },
       {
         id: "news_003",
-        title: "Apple Intelligence 2.0：手机端侧推理已能处理 70% 日常任务",
-        summary: "苹果在最新的开发者预览版中升级了端侧 AI 引擎。通过全新的模型压缩技术，iPhone 现在可以在不连接网络的情况下，本地处理复杂的邮件摘要、图像编辑和个性化日程管理，电池寿命损耗几乎可以忽略不计。",
-        category: NewsCategory.TECHNOLOGY,
-        source: "9to5Mac",
-        time: "02:10 PM",
-        tags: ["Apple", "端侧AI"],
+        title: "英伟达发布 NIMs 容器化微服务，加速企业级 AI 部署",
+        summary: "NVIDIA NIMs 允许开发者在几分钟内通过容器部署预训练模型，极大简化了传统繁琐的 AI 工作流。",
+        category: NewsCategory.HARDWARE,
+        source: "InfoQ AI",
+        time: "10:45 AM",
+        tags: ["NVIDIA", "NIMs"],
         impact: "Medium",
-        url: "https://apple.com"
+        url: "https://www.infoq.com/ai/"
       },
       {
         id: "news_004",
-        title: "Mistral AI 发布全新开源模型：以 12B 参数挑战 GPT-4",
-        summary: "来自法国的 AI 领头羊 Mistral 再次震撼开源界。新发布的 Pixtral 12B 模型在多模态理解上表现卓越，其在商用许可下的开放策略进一步巩固了其作为欧洲 AI 之光的地位。",
-        category: NewsCategory.MODEL,
-        source: "Mistral Blog",
-        time: "03:50 PM",
-        tags: ["Mistral", "开源多模态"],
-        impact: "Medium",
-        url: "https://mistral.ai"
+        title: "Wired 深度：揭秘马斯克 xAI 如何在 19 天内建成巨型算力中心",
+        summary: "位于孟菲斯的 Colossus 算力中心装备了 10 万块 H100 芯片，其建设速度打破了行业纪录。",
+        category: NewsCategory.INDUSTRY,
+        source: "Wired",
+        time: "11:20 AM",
+        tags: ["xAI", "算力中心"],
+        impact: "High",
+        url: "https://www.wired.com/tag/artificial-intelligence/"
       },
       {
         id: "news_005",
-        title: "Meta 发布开源 Llama 4 路线图，承诺性能比肩闭源顶流",
-        summary: "扎克伯格表示，Llama 4 将采用混合专家模型 (MoE) 架构，总参数量可能突破 500B。Meta 致力于维持开源生态的领导地位，计划在全球范围内建立更多的 AI 合规化标准。",
-        category: NewsCategory.INDUSTRY,
-        source: "Meta AI",
-        time: "04:30 PM",
-        tags: ["Llama 4", "开源生态"],
-        impact: "High",
-        url: "https://ai.meta.com"
+        title: "Reddit 热议：Llama-3.1-405B 在本地量化后的推理性能评测",
+        summary: "社区开发者分享了在消费级显卡上运行 4-bit 量化版 Llama 3.1 的实测数据，其智力水平依然保持在顶级梯队。",
+        category: NewsCategory.MODEL,
+        source: "r/MachineLearning",
+        time: "01:10 PM",
+        tags: ["Llama", "开源社区"],
+        impact: "Medium",
+        url: "https://www.reddit.com/r/MachineLearning/"
       },
       {
         id: "news_006",
-        title: "全球首例：AI 辅助研发的靶向药进入三期临床试验",
-        summary: "由 Insilico Medicine 利用 AI 发现并设计的特发性肺纤维化药物正式进入三期。相较于传统研发方式，AI 将临床前研究时间缩短了 3 年，成本削减了 90%，展现了 AI 对生物医药的变革力。",
-        category: NewsCategory.TECHNOLOGY,
-        source: "Nature Medicine",
-        time: "08:00 PM",
-        tags: ["AI制药", "生物技术"],
+        title: "The Information：Google 计划在 12 月发布下一代模型 Gemini 2.0",
+        summary: "Gemini 2.0 将在多模态原生处理和实时语音交互方面带来重大升级，旨在夺回 AI 领域的领导权。",
+        category: NewsCategory.MODEL,
+        source: "The Information",
+        time: "03:45 PM",
+        tags: ["Google", "Gemini 2.0"],
         impact: "High",
-        url: "https://www.nature.com"
+        url: "https://www.theinformation.com/"
+      },
+      {
+        id: "news_007",
+        title: "加州签署 SB 1047 AI 安全法案修订版，引发开发者激辩",
+        summary: "该法案旨在对开发超大型模型的公司进行安全监管，虽然经过修订放宽了条件，但仍被部分风投机构批评。 ",
+        category: NewsCategory.POLICY,
+        source: "TechCrunch",
+        time: "05:00 PM",
+        tags: ["AI安全", "政策"],
+        impact: "Medium",
+        url: "https://techcrunch.com/"
+      },
+      {
+        id: "news_008",
+        title: "Perplexity 推出 Pro Search 升级版：实现长链条逻辑搜索",
+        summary: "Perplexity 的新功能可以自动将复杂问题拆分为多个步骤，跨网页抓取并汇总深度报告。",
+        category: NewsCategory.TECHNOLOGY,
+        source: "ainews.com",
+        time: "06:30 PM",
+        tags: ["Perplexity", "搜索革命"],
+        impact: "Medium",
+        url: "https://www.ainews.com"
+      },
+      {
+        id: "news_009",
+        title: "MIT 研究成果：新型光子芯片可让 AI 计算速度提升 100 倍",
+        summary: "MIT 研究团队开发的基于光干涉原理的处理器，能在极低功耗下完成大规模矩阵运算。",
+        category: NewsCategory.HARDWARE,
+        source: "MIT Tech Review",
+        time: "08:15 PM",
+        tags: ["光子芯片", "未来计算"],
+        impact: "High",
+        url: "https://www.technologyreview.com/"
+      },
+      {
+        id: "news_010",
+        title: "波士顿动力展示 Atlas 纯电版全自动搬运能力",
+        summary: "不再依赖液压驱动的全新 Atlas 机器人展示了在复杂物流环境中的路径规划与避障能力。",
+        category: NewsCategory.TECHNOLOGY,
+        source: "The Verge",
+        time: "09:40 PM",
+        tags: ["波士顿动力", "机器人"],
+        impact: "Medium",
+        url: "https://www.theverge.com/"
       }
     ]
   }
 };
 
 export const fetchDailyAINews = async (date: string): Promise<DailyReport> => {
-  // 模拟网络延迟以保持 UX 连贯感
   await new Promise(r => setTimeout(r, 600));
-  
-  // 动态处理：如果请求的是今天，确保返回的内容日期也是今天
   const today = getTodayStr();
   const baseData = NEWS_DATABASE[date] || NEWS_DATABASE["default"];
-  
   return {
     ...baseData,
     date: date === today ? today : date
