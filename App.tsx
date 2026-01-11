@@ -9,7 +9,7 @@ import {
   RefreshCw, Sparkles, X, 
   Search as SearchIcon,
   BarChart3, Eye, Zap, Newspaper, Calendar, Activity,
-  ArrowUpRight, Bookmark, Trophy, ExternalLink
+  ArrowUpRight, Bookmark, Trophy, ExternalLink, ListOrdered
 } from 'lucide-react';
 
 const STORAGE_KEY = 'ai_portal_engagement_stats';
@@ -215,6 +215,16 @@ const App: React.FC = () => {
                       {cat}
                     </button>
                   ))}
+                  <div className="pt-4 px-4">
+                    <a 
+                      href="https://openlm.ai/chatbot-arena/" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="flex items-center gap-2 text-[10px] font-black text-indigo-600 hover:translate-x-1 transition-transform uppercase tracking-widest"
+                    >
+                      <ListOrdered className="w-3.5 h-3.5" /> 竞技场榜单
+                    </a>
+                  </div>
                 </div>
               </aside>
 
@@ -238,13 +248,18 @@ const App: React.FC = () => {
                   <Trophy className="absolute -right-6 -bottom-6 w-32 h-32 opacity-10 rotate-12" />
                   <div className="relative z-10">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 rounded-full text-[9px] font-black tracking-widest mb-6">
-                      <ExternalLink className="w-3 h-3" /> 数据洞察
+                      <ExternalLink className="w-3 h-3" /> 性能榜单
                     </div>
-                    <h3 className="text-xl font-black mb-4 leading-tight">每日 AI 脉动分析</h3>
-                    <p className="text-xs font-bold leading-relaxed mb-8 opacity-90">系统通过本地预置引擎模拟全球热点，为您展示最具价值的行业走向。</p>
-                    <button onClick={() => setRefreshTrigger(t => t + 1)} className="inline-flex items-center justify-center w-full py-4 bg-white text-indigo-600 rounded-2xl font-black text-xs hover:bg-slate-50 transition-all shadow-xl">
-                      强制刷新引擎 <ArrowUpRight className="ml-2 w-4 h-4" />
-                    </button>
+                    <h3 className="text-xl font-black mb-4 leading-tight">Chatbot Arena 大模型排名</h3>
+                    <p className="text-xs font-bold leading-relaxed mb-8 opacity-90">访问 LMSYS Chatbot Arena 获取基于真实用户偏好的全球大模型实时竞技排名。</p>
+                    <a 
+                      href="https://openlm.ai/chatbot-arena/" 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center w-full py-4 bg-white text-indigo-600 rounded-2xl font-black text-xs hover:bg-slate-50 transition-all shadow-xl"
+                    >
+                      查看竞技场榜单 <ArrowUpRight className="ml-2 w-4 h-4" />
+                    </a>
                   </div>
                 </div>
 
